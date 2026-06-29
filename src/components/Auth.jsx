@@ -13,7 +13,10 @@ export default function Auth() {
     setError(''); setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) setError(error.message)
+    if (error) {
+      if (error.status === 429) setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+      else setError(error.message)
+    }
   }
 
   return (
