@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export function formatDate(d) {
   const [y, m, day] = d.split('-')
@@ -16,21 +16,31 @@ function maskDate(value) {
 
 export default function DateField({ value, onChange }) {
   const [text, setText] = useState(formatDate(value))
+  const inputRef = useRef(null)
 
   useEffect(() => { setText(formatDate(value)) }, [value])
 
-  function handleChange(raw) {
+  function handleChange(e) {
+    const raw = e.target.value
+    const prevCursor = e.target.selectionStart
     const masked = maskDate(raw)
     setText(masked)
+
     const match = masked.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
     if (match) {
       const [, d, m, y] = match
       onChange(`${y}-${m}-${d}`)
     }
+
+    const diff = masked.length - raw.length
+    const nextCursor = Math.max(0, prevCursor + diff)
+    requestAnimationFrame(() => {
+      inputRef.current?.setSelectionRange(nextCursor, nextCursor)
+    })
   }
 
   return (
-    <input type="text" inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10}
-      value={text} onChange={e => handleChange(e.target.value)} />
+    <input ref={inputRef} type="text" inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10}
+      value={text} onChange={handleChange} />
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import DateField, { formatDate } from './DateField'
+import ConfirmModal from './ConfirmModal'
 
 export default function QuizPoints({ groups, reloadTotals }) {
   const today = new Date().toISOString().slice(0, 10)
@@ -12,6 +13,12 @@ export default function QuizPoints({ groups, reloadTotals }) {
 
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editGroupId, setEditGroupId] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editPoints, setEditPoints] = useState('')
+  const [editNote, setEditNote] = useState('')
 
   const groupName = id => groups.find(g => g.id === id)?.name || '—'
 
@@ -38,10 +45,28 @@ export default function QuizPoints({ groups, reloadTotals }) {
     loadHistory(); reloadTotals?.()
   }
 
-  async function remove(id) {
-    await supabase.from('quiz_points').delete().eq('id', id)
-    setHistory(h => h.filter(r => r.id !== id))
+  async function confirmRemove() {
+    if (!pendingDelete) return
+    await supabase.from('quiz_points').delete().eq('id', pendingDelete.id)
+    setHistory(h => h.filter(r => r.id !== pendingDelete.id))
+    setPendingDelete(null)
     reloadTotals?.()
+  }
+
+  function startEdit(h) {
+    setEditingId(h.id)
+    setEditGroupId(h.group_id)
+    setEditDate(h.date)
+    setEditPoints(String(h.points))
+    setEditNote(h.note || '')
+  }
+
+  async function saveEdit(id) {
+    if (!editGroupId || !editPoints) return
+    const { error } = await supabase.from('quiz_points')
+      .update({ group_id: editGroupId, date: editDate, points: Number(editPoints), note: editNote || null })
+      .eq('id', id)
+    if (!error) { setEditingId(null); loadHistory(); reloadTotals?.() }
   }
 
   return (
@@ -79,20 +104,51 @@ export default function QuizPoints({ groups, reloadTotals }) {
             : <table>
                 <thead><tr><th>Dia</th><th>Grupo</th><th>Pontos</th><th>Observação</th><th></th></tr></thead>
                 <tbody>
-                  {history.map(h => (
+                  {history.map(h => editingId === h.id ? (
+                    <tr key={h.id}>
+                      <td><DateField value={editDate} onChange={setEditDate} /></td>
+                      <td>
+                        <select value={editGroupId} onChange={e => setEditGroupId(e.target.value)}>
+                          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                        </select>
+                      </td>
+                      <td><input className="score-edit" type="number" value={editPoints} onChange={e => setEditPoints(e.target.value)} /></td>
+                      <td><input value={editNote} onChange={e => setEditNote(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveEdit(h.id)} /></td>
+                      <td style={{ width: 150 }}>
+                        <div className="row" style={{ gap: 6 }}>
+                          <button className="btn-gold btn-sm" onClick={() => saveEdit(h.id)}>Salvar</button>
+                          <button className="btn-ghost btn-sm" onClick={() => setEditingId(null)}>Cancelar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
                     <tr key={h.id}>
                       <td style={{ fontWeight: 600 }}>{formatDate(h.date)}</td>
                       <td><span className="pill">{groupName(h.group_id)}</span></td>
                       <td>{h.points}</td>
                       <td className="muted">{h.note || '—'}</td>
-                      <td style={{ width: 90 }}>
-                        <button className="btn-danger btn-sm" onClick={() => remove(h.id)}>Excluir</button>
+                      <td style={{ width: 150 }}>
+                        <div className="row" style={{ gap: 6 }}>
+                          <button className="btn-ghost btn-sm" onClick={() => startEdit(h)}>Editar</button>
+                          <button className="btn-danger btn-sm" onClick={() => setPendingDelete(h)}>Excluir</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>}
       </div>
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Excluir lançamento"
+          message={`Excluir o lançamento de ${pendingDelete.points} pontos para "${groupName(pendingDelete.group_id)}"?`}
+          confirmLabel="Excluir"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   )
 }

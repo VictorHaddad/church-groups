@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import ConfirmModal from './ConfirmModal'
 
 export default function Groups({ groups, people, reload }) {
   const [name, setName] = useState('')
@@ -7,6 +8,8 @@ export default function Groups({ groups, people, reload }) {
   const [err, setErr] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   async function add(e) {
     e.preventDefault()
@@ -16,20 +19,23 @@ export default function Groups({ groups, people, reload }) {
     setName(''); setDescription(''); reload()
   }
 
-  async function remove(id) {
-    if (!confirm('Excluir este grupo e todas as pessoas vinculadas?')) return
-    await supabase.from('groups').delete().eq('id', id)
+  async function confirmRemove() {
+    if (!pendingDelete) return
+    await supabase.from('groups').delete().eq('id', pendingDelete.id)
+    setPendingDelete(null)
     reload()
   }
 
   function startEdit(g) {
     setEditingId(g.id)
     setEditName(g.name)
+    setEditDescription(g.description || '')
   }
 
   async function saveEdit(id) {
     if (!editName.trim()) return
-    const { error } = await supabase.from('groups').update({ name: editName.trim() }).eq('id', id)
+    const { error } = await supabase.from('groups')
+      .update({ name: editName.trim(), description: editDescription.trim() }).eq('id', id)
     if (!error) { setEditingId(null); reload() }
   }
 
@@ -56,25 +62,28 @@ export default function Groups({ groups, people, reload }) {
         : <div className="grid">
             {groups.map(g => (
               <div className="card" key={g.id}>
-                <div className="spread">
-                  {editingId === g.id
-                    ? <input value={editName} onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveEdit(g.id)}
-                        style={{ marginRight: 8 }} autoFocus />
-                    : <h3 style={{ fontSize: 18 }}>{g.name}</h3>}
-                  <div className="row" style={{ gap: 6 }}>
-                    {editingId === g.id
-                      ? <>
-                          <button className="btn-gold btn-sm" onClick={() => saveEdit(g.id)}>Salvar</button>
-                          <button className="btn-ghost btn-sm" onClick={() => setEditingId(null)}>Cancelar</button>
-                        </>
-                      : <>
+                {editingId === g.id
+                  ? <>
+                      <label style={{ marginTop: 0 }}>Nome</label>
+                      <input value={editName} onChange={e => setEditName(e.target.value)} autoFocus />
+                      <label>Descrição</label>
+                      <input value={editDescription} onChange={e => setEditDescription(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveEdit(g.id)} />
+                      <div className="row" style={{ justifyContent: 'flex-end', gap: 6, marginTop: 12 }}>
+                        <button className="btn-gold btn-sm" onClick={() => saveEdit(g.id)}>Salvar</button>
+                        <button className="btn-ghost btn-sm" onClick={() => setEditingId(null)}>Cancelar</button>
+                      </div>
+                    </>
+                  : <>
+                      <div className="spread">
+                        <h3 style={{ fontSize: 18 }}>{g.name}</h3>
+                        <div className="row" style={{ gap: 6 }}>
                           <button className="btn-ghost btn-sm" onClick={() => startEdit(g)}>Editar</button>
-                          <button className="btn-danger btn-sm" onClick={() => remove(g.id)}>Excluir</button>
-                        </>}
-                  </div>
-                </div>
-                <p className="muted" style={{ fontSize: 13, margin: '6px 0 14px', minHeight: 18 }}>{g.description || '—'}</p>
+                          <button className="btn-danger btn-sm" onClick={() => setPendingDelete(g)}>Excluir</button>
+                        </div>
+                      </div>
+                      <p className="muted" style={{ fontSize: 13, margin: '6px 0 14px', minHeight: 18 }}>{g.description || '—'}</p>
+                    </>}
                 <div className="row">
                   <label style={{ margin: 0 }}>Pontos</label>
                   <span className="pill">{g.points} pts</span>
@@ -93,6 +102,16 @@ export default function Groups({ groups, people, reload }) {
               </div>
             ))}
           </div>}
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Excluir grupo"
+          message={`Tem certeza que deseja excluir o grupo "${pendingDelete.name}"? Todas as pessoas vinculadas a ele também serão excluídas.`}
+          confirmLabel="Excluir"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   )
 }

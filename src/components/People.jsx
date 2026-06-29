@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import ConfirmModal from './ConfirmModal'
 
 export default function People({ people, groups, reload }) {
   const [name, setName] = useState('')
   const [groupId, setGroupId] = useState('')
   const [points, setPoints] = useState(0)
   const [err, setErr] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   const groupName = id => groups.find(g => g.id === id)?.name || '—'
 
@@ -23,9 +25,10 @@ export default function People({ people, groups, reload }) {
     if (!error) reload()
   }
 
-  async function remove(id) {
-    if (!confirm('Excluir esta pessoa?')) return
-    await supabase.from('people').delete().eq('id', id)
+  async function confirmRemove() {
+    if (!pendingDelete) return
+    await supabase.from('people').delete().eq('id', pendingDelete.id)
+    setPendingDelete(null)
     reload()
   }
 
@@ -67,13 +70,23 @@ export default function People({ people, groups, reload }) {
                     <td><input className="score-edit" type="number" defaultValue={p.points}
                       onBlur={e => updatePoints(p.id, e.target.value)} /></td>
                     <td style={{ textAlign: 'right' }}>
-                      <button className="btn-danger btn-sm" onClick={() => remove(p.id)}>Excluir</button>
+                      <button className="btn-danger btn-sm" onClick={() => setPendingDelete(p)}>Excluir</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>}
       </div>
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Excluir pessoa"
+          message={`Tem certeza que deseja excluir "${pendingDelete.name}"? Os registros de presença dela também serão excluídos.`}
+          confirmLabel="Excluir"
+          onConfirm={confirmRemove}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   )
 }

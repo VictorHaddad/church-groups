@@ -94,6 +94,15 @@ tr:last-child td { border-bottom: none; }
 
 .day-divider td { border-top: 2px solid var(--gold); }
 
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(28,26,46,.45);
+  display: grid; place-items: center; padding: 20px; z-index: 100;
+}
+.modal-card {
+  width: 100%; max-width: 380px; background: #fff; border-radius: 16px;
+  padding: 26px; box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+
 .rank-num { font-family: 'Fraunces', serif; font-size: 20px; width: 38px; color: var(--gold-deep); }
 .rank-1 .rank-num { color: var(--gold); }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import DateField, { formatDate } from './DateField'
+import ConfirmModal from './ConfirmModal'
 
 export default function Attendance({ people, groups, reloadTotals }) {
   const today = new Date().toISOString().slice(0, 10)
@@ -13,6 +14,7 @@ export default function Attendance({ people, groups, reloadTotals }) {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [filterPerson, setFilterPerson] = useState('all')
   const [filterDate, setFilterDate] = useState('all')
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -85,12 +87,15 @@ export default function Attendance({ people, groups, reloadTotals }) {
     refreshAll()
   }
 
-  async function removeRecord(record) {
+  async function confirmRemoveRecord() {
+    const record = pendingDelete
+    if (!record) return
     await supabase.from('attendance').delete().eq('id', record.id)
     setHistory(h => h.filter(r => r.id !== record.id))
     if (record.date === date) {
       setRecords(r => { const c = { ...r }; delete c[record.person_id]; return c })
     }
+    setPendingDelete(null)
     reloadTotals?.()
   }
 
@@ -221,7 +226,7 @@ export default function Attendance({ people, groups, reloadTotals }) {
                         <td>{h.booklet ? 'Sim' : '—'}</td>
                         <td>{h.visitors || '—'}</td>
                         <td style={{ width: 90 }}>
-                          <button className="btn-danger btn-sm" onClick={() => removeRecord(h)}>Excluir</button>
+                          <button className="btn-danger btn-sm" onClick={() => setPendingDelete(h)}>Excluir</button>
                         </td>
                       </tr>
                     )
@@ -229,6 +234,16 @@ export default function Attendance({ people, groups, reloadTotals }) {
                 </tbody>
               </table>}
       </div>
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Excluir registro"
+          message={`Excluir o registro de presença de "${personName(pendingDelete.person_id)}" em ${formatDate(pendingDelete.date)}?`}
+          confirmLabel="Excluir"
+          onConfirm={confirmRemoveRecord}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   )
 }
