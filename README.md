@@ -1,35 +1,31 @@
 # Gestão de Grupos da Igreja
 
-App React + Vite + Supabase para administrar grupos, pessoas, presença e ranking.
+App da EBD (Escola Bíblica Dominical) para acompanhar grupos, pessoas e pontuação, com duas áreas:
 
-## 1. Configurar credenciais
-Edite o arquivo `.env` (já criado) com suas credenciais do Supabase:
+- **Página pública** (`/`): ranking de grupos e de pessoas, sem necessidade de login.
+- **Área de líderes** (`/admin`): painel de gestão, com login restrito.
 
-```
-VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=sua_anon_key
-```
+## Área de líderes
 
-Encontre em: Supabase > Project Settings > API.
+- Cadastro e edição de grupos (nome, descrição) e de pessoas vinculadas a um grupo
+- Chamada de presença por data, com marcação de presente/ausente, bíblia, revista e visitantes trazidos
+- Histórico de presenças, com filtros por pessoa e por dia
+- Lançamento de pontos de pergunta por grupo, com histórico editável
+- Aba de pontuação detalhando, por grupo, quanto cada categoria contribuiu para o total
 
-## 2. Criar as tabelas
-Abra o **SQL Editor** no Supabase, cole o conteúdo de `supabase_schema.sql` e clique em **Run**.
+## Pontuação
 
-## 3. Criar contas de admin (2 a 5)
-Em **Authentication > Users > Add user**, ou pela tela "Criar conta" do próprio app.
-Para impedir cadastros abertos depois, desative "Allow new sign-ups" em Authentication > Providers > Email.
+A pontuação dos grupos é calculada automaticamente a partir das ações registradas na área de líderes:
 
-## 4. Rodar
-```
-npm install
-npm run dev
-```
+| Ação | Pontos |
+|---|---|
+| Presença | +10 |
+| Ausência | -10 |
+| Bíblia levada | +1 |
+| Revista levada | +1 |
+| Visitante trazido | +100 |
+| Pergunta acertada | lançado manualmente |
 
-## Funcionalidades
-- Login com e-mail e senha (Supabase Auth)
-- Cadastro de grupos (nome, descrição, pontuação)
-- Cadastro de pessoas vinculadas a grupos, com pontuação individual
-- Marcação de presença por pessoa e data
-- Ranking de grupos e de pessoas por pontuação
+## Stack
 
-Edite pontos clicando no campo numérico e saindo dele (salva automaticamente).
+React + Vite no front-end, Supabase (Postgres + Auth) no back-end. Publicado no GitHub Pages via GitHub Actions.
