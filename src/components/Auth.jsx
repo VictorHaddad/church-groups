@@ -2,6 +2,12 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import logo from '../assets/logo_igreja_02.png'
 
+function translateError(error) {
+  if (error.status === 429) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+  if (error.message === 'Invalid login credentials') return 'E-mail ou senha incorretos.'
+  return error.message
+}
+
 export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -13,10 +19,7 @@ export default function Auth() {
     setError(''); setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) {
-      if (error.status === 429) setError('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
-      else setError(error.message)
-    }
+    if (error) setError(translateError(error))
   }
 
   return (
