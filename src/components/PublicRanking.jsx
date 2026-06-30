@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import ThemeToggle from './ThemeToggle'
+import { useTheme } from '../useTheme'
 import logo from '../assets/logo_igreja_02.png'
 
 export default function PublicRanking() {
+  const { theme, toggle } = useTheme()
   const [groups, setGroups] = useState([])
   const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +35,20 @@ export default function PublicRanking() {
             <strong className="serif" style={{ fontSize: 18 }}>Ranking dos Grupos</strong>
           </div>
         </div>
-        <a className="btn-ghost btn-sm" href={`${import.meta.env.BASE_URL}admin`}>Área de líderes</a>
+        <div className="row">
+          <ThemeToggle theme={theme} onToggle={toggle} />
+          <a
+            href={`${import.meta.env.BASE_URL}admin`}
+            className="leader-link"
+            title="Área de líderes"
+            aria-label="Área de líderes"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </a>
+        </div>
       </div>
 
       {loading ? <div className="empty">Carregando…</div> : (

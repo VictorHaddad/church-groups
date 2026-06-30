@@ -7,6 +7,9 @@ import Attendance from './components/Attendance'
 import QuizPoints from './components/QuizPoints'
 import Ranking from './components/Ranking'
 import ScoringInfo from './components/ScoringInfo'
+import ThemeToggle from './components/ThemeToggle'
+import UserMenu from './components/UserMenu'
+import { useTheme } from './useTheme'
 import logo from './assets/logo_igreja_02.png'
 
 const TABS = [
@@ -23,6 +26,7 @@ function emptyBreakdown() {
 }
 
 export default function AdminApp() {
+  const { theme, toggle } = useTheme()
   const [session, setSession] = useState(null)
   const [tab, setTab] = useState('ranking')
   const [groups, setGroups] = useState([])
@@ -94,9 +98,8 @@ export default function AdminApp() {
           </div>
         </div>
         <div className="row">
-          <a className="btn-ghost btn-sm" href={import.meta.env.BASE_URL}>Ver página pública</a>
-          <span className="muted" style={{ fontSize: 13 }}>{session.user.email}</span>
-          <button className="btn-ghost btn-sm" onClick={() => supabase.auth.signOut()}>Sair</button>
+          <ThemeToggle theme={theme} onToggle={toggle} />
+          <UserMenu session={session} />
         </div>
       </div>
 
