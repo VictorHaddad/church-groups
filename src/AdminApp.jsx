@@ -7,18 +7,23 @@ import Attendance from './components/Attendance'
 import QuizPoints from './components/QuizPoints'
 import Ranking from './components/Ranking'
 import ScoringInfo from './components/ScoringInfo'
+import Financeiro from './components/Financeiro'
 import ThemeToggle from './components/ThemeToggle'
 import UserMenu from './components/UserMenu'
 import { useTheme } from './useTheme'
 import logo from './assets/logo_igreja_02.png'
 
+const GROUP_ROLES = ['admin', 'lider']
+const FINANCE_ROLES = ['admin', 'secretaria']
+
 const TABS = [
-  { id: 'ranking', label: 'Ranking' },
-  { id: 'groups', label: 'Grupos' },
-  { id: 'people', label: 'Pessoas' },
-  { id: 'attendance', label: 'Presença' },
-  { id: 'quiz', label: 'Perguntas' },
-  { id: 'scoring', label: 'Pontuação' },
+  { id: 'ranking', label: 'Ranking', roles: GROUP_ROLES },
+  { id: 'groups', label: 'Grupos', roles: GROUP_ROLES },
+  { id: 'people', label: 'Pessoas', roles: GROUP_ROLES },
+  { id: 'attendance', label: 'Presença', roles: GROUP_ROLES },
+  { id: 'quiz', label: 'Perguntas', roles: GROUP_ROLES },
+  { id: 'scoring', label: 'Pontuação', roles: GROUP_ROLES },
+  { id: 'financeiro', label: 'Financeiro', roles: FINANCE_ROLES },
 ]
 
 function emptyBreakdown() {
@@ -28,6 +33,8 @@ function emptyBreakdown() {
 export default function AdminApp() {
   const { theme, toggle } = useTheme()
   const [session, setSession] = useState(null)
+  const [role, setRole] = useState(null)
+  const [roleLoading, setRoleLoading] = useState(true)
   const [tab, setTab] = useState('ranking')
   const [groups, setGroups] = useState([])
   const [people, setPeople] = useState([])
@@ -38,6 +45,26 @@ export default function AdminApp() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!session) { setRole(null); setRoleLoading(false); return }
+    setRoleLoading(true)
+    supabase.from('profiles').select('role').eq('id', session.user.id).single()
+      .then(({ data }) => {
+        setRole(data?.role ?? 'lider')
+        setRoleLoading(false)
+      })
+  }, [session])
+
+  const visibleTabs = TABS.filter(t => role && t.roles.includes(role))
+  const canSeeGroups = role ? GROUP_ROLES.includes(role) : false
+
+  // Quando o papel carrega, garante que a aba ativa é uma permitida.
+  useEffect(() => {
+    if (role && !visibleTabs.some(t => t.id === tab)) {
+      setTab(visibleTabs[0]?.id ?? '')
+    }
+  }, [role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const reload = useCallback(async () => {
     const [g, p, att, vis, quiz] = await Promise.all([
@@ -83,9 +110,10 @@ export default function AdminApp() {
     setBreakdown(groupBreakdown)
   }, [])
 
-  useEffect(() => { if (session) reload() }, [session, reload])
+  useEffect(() => { if (session && canSeeGroups) reload() }, [session, canSeeGroups, reload])
 
   if (!session) return <Auth />
+  if (roleLoading) return <div className="empty" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>Carregando…</div>
 
   return (
     <div className="shell">
@@ -104,7 +132,7 @@ export default function AdminApp() {
       </div>
 
       <div className="tabs">
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
             {t.label}
           </button>
@@ -117,6 +145,7 @@ export default function AdminApp() {
       {tab === 'attendance' && <Attendance people={people} groups={groups} reloadTotals={reload} />}
       {tab === 'quiz' && <QuizPoints groups={groups} reloadTotals={reload} />}
       {tab === 'scoring' && <ScoringInfo groups={groups} breakdown={breakdown} />}
+      {tab === 'financeiro' && <Financeiro />}
     </div>
   )
 }

@@ -50,23 +50,39 @@ export default function Attendance({ people, groups, reloadTotals }) {
 
   function refreshAll() { loadHistory(); reloadTotals?.() }
 
-  async function setStatus(personId, status) {
+  // Um registro sem status, sem bíblia e sem revista não tem significado:
+  // em vez de gravar uma linha vazia, removemos o registro.
+  function isEmptyRecord({ status, bible, booklet }) {
+    return !status && !bible && !booklet
+  }
+
+  async function persist(personId, next) {
     const current = records[personId] || {}
-    const next = current.status === status ? null : status // clica de novo pra desmarcar
+    if (isEmptyRecord(next)) {
+      if (current.id) {
+        await supabase.from('attendance').delete().eq('id', current.id)
+        setRecords(r => { const c = { ...r }; delete c[personId]; return c })
+        refreshAll()
+      }
+      return
+    }
     const { data, error } = await supabase.from('attendance')
-      .upsert({ person_id: personId, date, status: next, bible: current.bible || false, booklet: current.booklet || false }, { onConflict: 'person_id,date' })
+      .upsert({ person_id: personId, date, ...next }, { onConflict: 'person_id,date' })
       .select('id, status, bible, booklet').single()
     if (!error) { setRecords(r => ({ ...r, [personId]: data })); refreshAll() }
+  }
+
+  async function setStatus(personId, status) {
+    const current = records[personId] || {}
+    const nextStatus = current.status === status ? null : status // clica de novo pra desmarcar
+    await persist(personId, { status: nextStatus, bible: current.bible || false, booklet: current.booklet || false })
   }
 
   async function toggleFlag(personId, field) {
     const current = records[personId] || {}
     const next = { status: current.status || null, bible: current.bible || false, booklet: current.booklet || false }
     next[field] = !next[field]
-    const { data, error } = await supabase.from('attendance')
-      .upsert({ person_id: personId, date, ...next }, { onConflict: 'person_id,date' })
-      .select('id, status, bible, booklet').single()
-    if (!error) { setRecords(r => ({ ...r, [personId]: data })); refreshAll() }
+    await persist(personId, next)
   }
 
   async function addVisitor(personId) {
@@ -112,6 +128,8 @@ export default function Attendance({ people, groups, reloadTotals }) {
 
   const filteredHistory = useMemo(() => (
     history
+      // esconde linhas vazias (sem status, bíblia, revista nem visitantes)
+      .filter(h => h.status || h.bible || h.booklet || h.visitors)
       .filter(h => filterPerson === 'all' || h.person_id === filterPerson)
       .filter(h => filterDate === 'all' || h.date === filterDate)
   ), [history, filterPerson, filterDate])
