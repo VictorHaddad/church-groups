@@ -116,7 +116,7 @@ tr:last-child td { border-bottom: none; }
 /* Leader link */
 .leader-link {
   display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%; padding: 0;
   color: #6b6678; text-decoration: none;
   transition: background .15s, color .15s;
 }
@@ -167,27 +167,14 @@ html[data-theme="dark"] .user-dropdown__item:hover { background: #252340; }
 html[data-theme="dark"] .user-dropdown__item--danger:hover { background: #3a1e27; }
 
 .theme-toggle {
-  background: none; border: none; padding: 0; cursor: pointer;
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%; padding: 0;
+  background: none; border: none; cursor: pointer;
+  color: #555; transition: background .15s, color .15s;
 }
-.theme-toggle__track {
-  width: 44px; height: 24px; border-radius: 999px;
-  background: var(--line); border: 1px solid var(--line);
-  display: flex; align-items: center; padding: 3px;
-  transition: background .25s;
-}
-.theme-toggle__thumb {
-  width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25);
-  transform: translateX(0); transition: transform .25s;
-  flex-shrink: 0;
-}
-html[data-theme="dark"] .theme-toggle__track {
-  background: var(--plum);
-}
-html[data-theme="dark"] .theme-toggle__thumb {
-  transform: translateX(20px);
-}
+.theme-toggle:hover { background: var(--line); color: #1c1a2e; }
+html[data-theme="dark"] .theme-toggle { color: #aaa; }
+html[data-theme="dark"] .theme-toggle:hover { background: #2e2a42; color: #e8e4f0; }
 
 @media (max-width: 600px){ .topbar{ flex-direction: column; gap:14px; align-items: stretch } }
 
