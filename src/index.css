@@ -113,6 +113,20 @@ tr:last-child td { border-bottom: none; }
   padding: 26px; box-shadow: var(--shadow); border: 1px solid var(--line);
 }
 
+.public-footer {
+  display: flex; justify-content: center; align-items: center; gap: 8px;
+  flex-wrap: wrap; padding: 30px 0 10px; margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.privacy-modal {
+  max-width: 640px; max-height: 82vh; overflow-y: auto; text-align: left;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.privacy-modal::-webkit-scrollbar { display: none; }
+.privacy-content p { font-size: 14px; line-height: 1.55; margin-bottom: 10px; }
+.privacy-content h4 { font-size: 14px; margin: 16px 0 4px; }
+
 .rank-num { font-family: 'Fraunces', serif; font-size: 20px; width: 38px; color: var(--gold-deep); }
 .rank-1 .rank-num { color: var(--gold); }
 

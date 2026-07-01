@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import PrivacyNotice from './PrivacyNotice'
 import logo from '../assets/logo_igreja_02.png'
 
 function translateError(error) {
@@ -47,6 +48,9 @@ export default function Auth() {
         <p className="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 22, fontStyle: 'italic' }}>
           "Lâmpada para os meus pés é tua palavra e luz, para o meu caminho." - Salmo 119:105
         </p>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <PrivacyNotice />
+        </div>
       </div>
     </div>
   )

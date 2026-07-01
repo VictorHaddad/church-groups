@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import ThemeToggle from './ThemeToggle'
+import PrivacyNotice from './PrivacyNotice'
 import { useTheme } from '../useTheme'
 import logo from '../assets/logo_igreja_02.png'
 
@@ -68,6 +69,12 @@ export default function PublicRanking() {
 
         </>
       )}
+
+      <footer className="public-footer">
+        <span className="muted" style={{ fontSize: 13 }}>IEP Jesus o Pão da Vida</span>
+        <span className="muted" style={{ fontSize: 13 }}>·</span>
+        <PrivacyNotice />
+      </footer>
     </div>
   )
 }
