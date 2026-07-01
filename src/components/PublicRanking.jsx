@@ -7,23 +7,18 @@ import logo from '../assets/logo_igreja_02.png'
 export default function PublicRanking() {
   const { theme, toggle } = useTheme()
   const [groups, setGroups] = useState([])
-  const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [g, p] = await Promise.all([
-        supabase.from('group_scores').select('*').order('points', { ascending: false }),
-        supabase.from('person_scores').select('*').order('points', { ascending: false }),
-      ])
-      setGroups(g.data || [])
-      setPeople(p.data || [])
+      // Só o ranking de grupos é público. Nomes de pessoas (dado pessoal,
+      // com afiliação religiosa) ficam restritos ao painel, com login.
+      const { data } = await supabase.from('group_scores').select('*').order('points', { ascending: false })
+      setGroups(data || [])
       setLoading(false)
     }
     load()
   }, [])
-
-  const groupName = id => groups.find(g => g.id === id)?.name || '—'
 
   return (
     <div className="shell">
@@ -71,23 +66,6 @@ export default function PublicRanking() {
                 </tbody></table>}
           </div>
 
-          <div className="section-head"><h2 style={{ fontSize: 20 }}>Ranking de pessoas</h2></div>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            {people.length === 0
-              ? <div className="empty">Sem pessoas.</div>
-              : <table><tbody>
-                  {people.map((p, i) => (
-                    <tr key={p.id} className={i === 0 ? 'rank-1' : ''}>
-                      <td className="rank-num">{i + 1}</td>
-                      <td style={{ fontWeight: 600 }}>
-                        {p.name}
-                        <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{groupName(p.group_id)}</div>
-                      </td>
-                      <td style={{ textAlign: 'right' }}><span className="pill">{p.points} pts</span></td>
-                    </tr>
-                  ))}
-                </tbody></table>}
-          </div>
         </>
       )}
     </div>

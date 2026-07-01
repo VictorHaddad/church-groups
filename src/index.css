@@ -70,6 +70,16 @@ button:active { transform: translateY(1px); }
 .topbar-logo {
   width: 38px; height: 38px; border-radius: 50%; object-fit: contain;
 }
+.modules { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.module-btn {
+  background: #fff; border: 1px solid var(--line); color: #6b6678;
+  padding: 10px 24px; border-radius: 12px; font-size: 14px; font-weight: 600;
+}
+.module-btn.active {
+  background: linear-gradient(135deg, var(--plum), var(--plum-soft));
+  color: #fff; border-color: transparent;
+}
+
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
 .tab {
   background: #fff; border: 1px solid var(--line); color: #6b6678;
@@ -207,6 +217,12 @@ html[data-theme="dark"] select {
 
 html[data-theme="dark"] .tab { background: #1e1c30; color: #9891b0; }
 html[data-theme="dark"] .tab.active { background: #e8e4f0; color: #12101e; }
+
+html[data-theme="dark"] .module-btn { background: #1e1c30; color: #9891b0; }
+html[data-theme="dark"] .module-btn.active {
+  background: linear-gradient(135deg, var(--plum), var(--plum-soft));
+  color: #fff;
+}
 
 html[data-theme="dark"] .card { background: #1e1c30; }
 

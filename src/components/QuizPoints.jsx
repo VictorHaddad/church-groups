@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
-import DateField, { formatDate } from './DateField'
+import DateField, { formatDate, todayLocal } from './DateField'
 import ConfirmModal from './ConfirmModal'
 
 export default function QuizPoints({ groups, reloadTotals }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   const [groupId, setGroupId] = useState('')
   const [date, setDate] = useState(today)
   const [points, setPoints] = useState('')
@@ -37,6 +37,7 @@ export default function QuizPoints({ groups, reloadTotals }) {
     e.preventDefault()
     setErr('')
     if (!groupId) return setErr('Selecione um grupo.')
+    if (date > todayLocal()) return setErr('A data não pode ser futura.')
     if (!points) return setErr('Informe a pontuação.')
     const { error } = await supabase.from('quiz_points')
       .insert({ group_id: groupId, date, points: Number(points), note: note || null })
@@ -63,6 +64,7 @@ export default function QuizPoints({ groups, reloadTotals }) {
 
   async function saveEdit(id) {
     if (!editGroupId || !editPoints) return
+    if (editDate > todayLocal()) return
     const { error } = await supabase.from('quiz_points')
       .update({ group_id: editGroupId, date: editDate, points: Number(editPoints), note: editNote || null })
       .eq('id', id)

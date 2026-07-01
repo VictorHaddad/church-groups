@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
-import DateField, { formatDate } from './DateField'
+import DateField, { formatDate, todayLocal } from './DateField'
 import ConfirmModal from './ConfirmModal'
 
 export default function Attendance({ people, groups, reloadTotals }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayLocal()
   const [date, setDate] = useState(today)
   const [records, setRecords] = useState({}) // person_id -> { id, status, bible, booklet }
   const [visitors, setVisitors] = useState({}) // person_id -> [event ids]
@@ -15,6 +15,8 @@ export default function Attendance({ people, groups, reloadTotals }) {
   const [filterPerson, setFilterPerson] = useState('all')
   const [filterDate, setFilterDate] = useState('all')
   const [pendingDelete, setPendingDelete] = useState(null)
+
+  const isFuture = date > today
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,6 +59,7 @@ export default function Attendance({ people, groups, reloadTotals }) {
   }
 
   async function persist(personId, next) {
+    if (isFuture) return
     const current = records[personId] || {}
     if (isEmptyRecord(next)) {
       if (current.id) {
@@ -86,6 +89,7 @@ export default function Attendance({ people, groups, reloadTotals }) {
   }
 
   async function addVisitor(personId) {
+    if (isFuture) return
     const { data, error } = await supabase.from('visitor_events')
       .insert({ person_id: personId, date }).select('id').single()
     if (!error) {
@@ -151,6 +155,7 @@ export default function Attendance({ people, groups, reloadTotals }) {
         <p className="muted" style={{ fontSize: 13 }}>
           {loading ? 'Carregando…' : `${presentCount} de ${people.length} presentes`}
         </p>
+        {isFuture && <div className="error">Não é possível marcar presença em data futura.</div>}
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

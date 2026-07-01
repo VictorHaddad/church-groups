@@ -1,8 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 
 export function formatDate(d) {
+  if (!d) return ''
   const [y, m, day] = d.split('-')
   return `${day}/${m}/${y}`
+}
+
+// Data de hoje em horário local (não UTC), no formato YYYY-MM-DD.
+export function todayLocal() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function maskDate(value) {
@@ -14,7 +21,7 @@ function maskDate(value) {
   return parts.join('/')
 }
 
-export default function DateField({ value, onChange }) {
+export default function DateField({ value, onChange, allowEmpty = false }) {
   const [text, setText] = useState(formatDate(value))
   const inputRef = useRef(null)
 
@@ -25,6 +32,8 @@ export default function DateField({ value, onChange }) {
     const prevCursor = e.target.selectionStart
     const masked = maskDate(raw)
     setText(masked)
+
+    if (allowEmpty && masked === '') onChange('')
 
     const match = masked.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
     if (match) {

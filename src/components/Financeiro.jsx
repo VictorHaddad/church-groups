@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 import DateField, { formatDate } from './DateField'
 import ConfirmModal from './ConfirmModal'
 
-const SERVICE_TYPES = ['Culto de domingo', 'Culto de quarta', 'Eventos especiais']
+const SERVICE_TYPES = ['Culto de domingo', 'Culto de quinta', 'Eventos especiais']
 const CATEGORIES = ['Oferta', 'Dízimo']
 
 // Data local (horário de Brasília), não UTC — evita virar o dia/mês à noite.
@@ -50,12 +50,15 @@ export default function Financeiro() {
   const today = localDate()
   const [month, setMonth] = useState(currentMonth())
   const [categoryFilter, setCategoryFilter] = useState(null)
+  const [hideValues, setHideValues] = useState(true)
   const [offerings, setOfferings] = useState([])
+  const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [date, setDate] = useState(today)
   const [serviceType, setServiceType] = useState(SERVICE_TYPES[0])
   const [category, setCategory] = useState(CATEGORIES[0])
+  const [memberId, setMemberId] = useState('')
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [err, setErr] = useState('')
@@ -65,14 +68,18 @@ export default function Financeiro() {
   const [editDate, setEditDate] = useState('')
   const [editServiceType, setEditServiceType] = useState('')
   const [editCategory, setEditCategory] = useState('')
+  const [editMemberId, setEditMemberId] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const [editNotes, setEditNotes] = useState('')
+
+  const memberName = id => members.find(m => m.id === id)?.name || ''
+  const showAmount = v => hideValues ? 'R$ ••••' : formatBRL(v)
 
   const load = useCallback(async () => {
     setLoading(true)
     const { first, last } = monthRange(month)
     const { data } = await supabase.from('offerings')
-      .select('id, date, service_type, category, amount, notes')
+      .select('id, date, service_type, category, amount, notes, member_id')
       .gte('date', first).lte('date', last)
       .order('date', { ascending: false })
     setOfferings(data || [])
@@ -80,6 +87,18 @@ export default function Financeiro() {
   }, [month])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    supabase.from('members').select('id, name').order('name')
+      .then(({ data }) => setMembers(data || []))
+  }, [])
+
+  // A mensagem de erro some sozinha após 5 segundos.
+  useEffect(() => {
+    if (!err) return
+    const t = setTimeout(() => setErr(''), 5000)
+    return () => clearTimeout(t)
+  }, [err])
 
   const filtered = categoryFilter ? offerings.filter(o => o.category === categoryFilter) : offerings
   const total = filtered.reduce((s, o) => s + Number(o.amount), 0)
@@ -92,12 +111,15 @@ export default function Financeiro() {
     e.preventDefault()
     setErr('')
     const value = maskToNumber(amount)
+    if (date > localDate()) return setErr('A data não pode ser futura.')
     if (!value || value <= 0) return setErr('Informe um valor válido.')
+    if (category === 'Dízimo' && !memberId) return setErr('Selecione o membro que está dizimando.')
     const { error } = await supabase.from('offerings').insert({
       date, service_type: serviceType, category, amount: value, notes: notes || null,
+      member_id: category === 'Dízimo' ? memberId : null,
     })
     if (error) return setErr(error.message)
-    setAmount(''); setNotes('')
+    setAmount(''); setNotes(''); setMemberId('')
     load()
   }
 
@@ -113,26 +135,31 @@ export default function Financeiro() {
     setEditDate(o.date)
     setEditServiceType(o.service_type)
     setEditCategory(o.category)
+    setEditMemberId(o.member_id || '')
     setEditAmount(numberToMask(o.amount))
     setEditNotes(o.notes || '')
   }
 
   async function saveEdit(id) {
     const value = maskToNumber(editAmount)
+    if (editDate > localDate()) return
     if (!value || value <= 0) return
+    if (editCategory === 'Dízimo' && !editMemberId) return
     const { error } = await supabase.from('offerings').update({
       date: editDate, service_type: editServiceType, category: editCategory,
       amount: value, notes: editNotes || null, updated_at: new Date().toISOString(),
+      member_id: editCategory === 'Dízimo' ? editMemberId : null,
     }).eq('id', id)
     if (!error) { setEditingId(null); load() }
   }
 
   function exportCSV() {
-    const headers = ['Data', 'Tipo de culto', 'Categoria', 'Valor', 'Observação']
+    const headers = ['Data', 'Tipo de culto', 'Categoria', 'Membro', 'Valor', 'Observação']
     const rows = filtered.map(o => [
       formatDate(o.date),
       o.service_type,
       o.category,
+      o.member_id ? memberName(o.member_id) : '',
       Number(o.amount).toFixed(2).replace('.', ','),
       o.notes || '',
     ])
@@ -152,8 +179,8 @@ export default function Financeiro() {
     <div>
       <div className="card">
         <p className="eyebrow">Novo registro</p>
-        <h2 style={{ fontSize: 20, marginBottom: 4 }}>Registrar oferta</h2>
-        <form onSubmit={add}>
+        <h2 style={{ fontSize: 20, marginBottom: 4 }}>Registrar</h2>
+        <form onSubmit={add} noValidate>
           <div className="grid" style={{ alignItems: 'end' }}>
             <div><label>Data</label><DateField value={date} onChange={setDate} /></div>
             <div>
@@ -168,14 +195,26 @@ export default function Financeiro() {
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {category === 'Dízimo' && (
+              <div>
+                <label>Membro (dízimo) *</label>
+                <select value={memberId} onChange={e => { setMemberId(e.target.value); setErr('') }} required>
+                  <option value="">Selecione…</option>
+                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+            )}
             <div>
-              <label>Valor (R$)</label>
+              <label>Valor (R$) *</label>
               <input type="text" inputMode="numeric" placeholder="0,00"
-                value={amount} onChange={e => setAmount(maskMoney(e.target.value))} required />
+                value={amount} onChange={e => { setAmount(maskMoney(e.target.value)); setErr('') }} required />
             </div>
             <div><label>Observação</label><input value={notes} onChange={e => setNotes(e.target.value)} /></div>
           </div>
-          <button className="btn-gold" style={{ marginTop: 16 }}>Registrar oferta</button>
+          {category === 'Dízimo' && members.length === 0 && (
+            <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>Cadastre membros primeiro para registrar dízimos.</p>
+          )}
+          <button className="btn-gold" style={{ marginTop: 16 }}>Registrar</button>
           {err && <div className="error">{err}</div>}
         </form>
       </div>
@@ -191,10 +230,26 @@ export default function Financeiro() {
           </div>
         </div>
         <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn-ghost btn-sm"
+            onClick={() => setHideValues(v => !v)}
+            title={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+            aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}>
+            {hideValues ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+          </button>
           <input type="month" value={month} onChange={e => setMonth(e.target.value)}
             style={{ width: 'auto' }} />
           <button className="btn-ghost btn-sm" onClick={exportCSV} disabled={!filtered.length}>
-            Exportar CSV
+            Exportar
           </button>
         </div>
       </div>
@@ -219,6 +274,13 @@ export default function Financeiro() {
                         <select value={editCategory} onChange={e => setEditCategory(e.target.value)}>
                           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
+                        {editCategory === 'Dízimo' && (
+                          <select value={editMemberId} onChange={e => setEditMemberId(e.target.value)}
+                            style={{ marginTop: 6 }}>
+                            <option value="">Membro…</option>
+                            {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td><input className="score-edit" type="text" inputMode="numeric"
                         value={editAmount} onChange={e => setEditAmount(maskMoney(e.target.value))} /></td>
@@ -235,8 +297,11 @@ export default function Financeiro() {
                     <tr key={o.id}>
                       <td style={{ fontWeight: 600 }}>{formatDate(o.date)}</td>
                       <td>{o.service_type}</td>
-                      <td><span className="pill">{o.category}</span></td>
-                      <td style={{ fontWeight: 600 }}>{formatBRL(o.amount)}</td>
+                      <td>
+                        <span className="pill">{o.category}</span>
+                        {o.member_id && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{memberName(o.member_id)}</div>}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{showAmount(o.amount)}</td>
                       <td className="muted">{o.notes || '—'}</td>
                       <td style={{ width: 150 }}>
                         <div className="row" style={{ gap: 6 }}>
@@ -250,7 +315,7 @@ export default function Financeiro() {
                 <tfoot>
                   <tr className="day-divider">
                     <td colSpan={3} style={{ fontWeight: 600 }}>Total do mês</td>
-                    <td style={{ fontWeight: 700 }}>{formatBRL(total)}</td>
+                    <td style={{ fontWeight: 700 }}>{showAmount(total)}</td>
                     <td colSpan={2}></td>
                   </tr>
                 </tfoot>
