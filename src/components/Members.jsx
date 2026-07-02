@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
-import DateField, { formatDate } from './DateField'
+import DateField, { formatDate, todayLocal } from './DateField'
 import ConfirmModal from './ConfirmModal'
 
 const MARITAL_STATUSES = ['Solteiro(a)', 'Casado(a)', 'Viúvo(a)', 'Divorciado(a)']
@@ -18,6 +18,20 @@ function maskPhone(value) {
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+// Máscara de exibição: mostra DDD + 2 últimos dígitos do telefone.
+function maskPhoneView(phone) {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (digits.length < 4) return '•'.repeat(digits.length) || '—'
+  return `(${digits.slice(0, 2)}) •••••-••${digits.slice(-2)}`
+}
+
+// Máscara de exibição: mostra os 2 primeiros do email e o domínio.
+function maskEmailView(email) {
+  const [local, domain] = (email || '').split('@')
+  if (!domain) return email || ''
+  return `${local.slice(0, 2)}${'•'.repeat(Math.max(1, local.length - 2))}@${domain}`
 }
 
 function localDateStr(d = new Date()) {
@@ -44,6 +58,7 @@ export default function Members() {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ativo')
+  const [hideContacts, setHideContacts] = useState(true)
   const [pendingDelete, setPendingDelete] = useState(null)
 
   const set = (field) => (value) => setForm(f => ({ ...f, [field]: value }))
@@ -142,6 +157,11 @@ export default function Members() {
 
   const activeCount = members.filter(m => m.status === 'ativo').length
 
+  const currentMM = todayLocal().slice(5, 7)
+  const birthdaysThisMonth = members
+    .filter(m => m.birth_date && m.birth_date.slice(5, 7) === currentMM)
+    .sort((a, b) => a.birth_date.slice(8, 10).localeCompare(b.birth_date.slice(8, 10)))
+
   return (
     <div>
       <div className="card">
@@ -189,12 +209,36 @@ export default function Members() {
         </form>
       </div>
 
+      {birthdaysThisMonth.length > 0 && (
+        <div className="card">
+          <p className="eyebrow">🎂 Aniversariantes do mês</p>
+          <div className="birthday-list" style={{ marginTop: 12 }}>
+            {birthdaysThisMonth.map(m => (
+              <div key={m.id} className="birthday-item">
+                <span className="pill">{formatDate(m.birth_date).slice(0, 5)}</span>
+                <span>{m.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="section-head">
         <div>
           <h2 style={{ fontSize: 20 }}>Membros</h2>
           <p className="muted" style={{ fontSize: 13 }}>{activeCount} ativos · {members.length} no total</p>
         </div>
         <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn-ghost btn-sm"
+            onClick={() => setHideContacts(v => !v)}
+            title={hideContacts ? 'Mostrar contatos' : 'Ocultar contatos'}
+            aria-label={hideContacts ? 'Mostrar contatos' : 'Ocultar contatos'}>
+            {hideContacts ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            )}
+          </button>
           <input placeholder="Buscar por nome…" value={search}
             onChange={e => setSearch(e.target.value)} style={{ width: 200 }} />
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ width: 'auto' }}>
@@ -217,9 +261,9 @@ export default function Members() {
                     <tr key={m.id}>
                       <td style={{ fontWeight: 600 }}>
                         {m.name}
-                        {m.email && <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{m.email}</div>}
+                        {m.email && <div className="muted" style={{ fontSize: 12, fontWeight: 400 }}>{hideContacts ? maskEmailView(m.email) : m.email}</div>}
                       </td>
-                      <td>{m.phone || '—'}</td>
+                      <td>{m.phone ? (hideContacts ? maskPhoneView(m.phone) : m.phone) : '—'}</td>
                       <td>{m.birth_date ? formatDate(m.birth_date) : '—'}</td>
                       <td className="muted">{m.church_role || '—'}</td>
                       <td><span className="pill">{m.status === 'ativo' ? 'Ativo' : 'Inativo'}</span></td>

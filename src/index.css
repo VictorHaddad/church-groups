@@ -113,6 +113,24 @@ tr:last-child td { border-bottom: none; }
   padding: 26px; box-shadow: var(--shadow); border: 1px solid var(--line);
 }
 
+.birthday-modal { position: relative; overflow: hidden; max-width: 420px; }
+.birthday-list { display: flex; flex-wrap: wrap; gap: 12px 18px; }
+.birthday-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti span {
+  position: absolute; top: -14px; width: 8px; height: 14px; border-radius: 2px;
+  opacity: .9; animation-name: confetti-fall; animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-14px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(360px) rotate(420deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti span { animation: none; display: none; }
+}
+
 .public-footer {
   display: flex; justify-content: center; align-items: center; gap: 8px;
   flex-wrap: wrap; padding: 30px 0 10px; margin-top: 24px;

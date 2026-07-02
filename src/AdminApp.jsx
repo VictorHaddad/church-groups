@@ -9,6 +9,7 @@ import Ranking from './components/Ranking'
 import ScoringInfo from './components/ScoringInfo'
 import Financeiro from './components/Financeiro'
 import Members from './components/Members'
+import BirthdayModal from './components/BirthdayModal'
 import ThemeToggle from './components/ThemeToggle'
 import UserMenu from './components/UserMenu'
 import { useTheme } from './useTheme'
@@ -145,6 +146,7 @@ export default function AdminApp() {
 
   return (
     <div className="shell">
+      <BirthdayModal session={session} enabled={canAccessFinance} />
       <div className="topbar">
         <div className="brand">
           <img src={logo} alt="Logo da igreja" className="topbar-logo" />
